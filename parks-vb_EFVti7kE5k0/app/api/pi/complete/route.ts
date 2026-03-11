@@ -4,9 +4,28 @@ import { NextRequest, NextResponse } from 'next/server'
 const PI_API_URL = process.env.PI_API_URL || 'https://api.minepi.com'
 const PI_API_KEY = process.env.PI_API_KEY
 
+// Basic allow-list validation for payment IDs to prevent unsafe URL paths
+function isValidPaymentId(paymentId: unknown): paymentId is string {
+  if (typeof paymentId !== 'string') {
+    return false
+  }
+
+  // Allow only alphanumerics, dashes and underscores, with a reasonable length limit
+  const PAYMENT_ID_REGEX = /^[A-Za-z0-9_-]{1,128}$/
+  return PAYMENT_ID_REGEX.test(paymentId)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { paymentId, txid } = await request.json()
+    
+    if (!isValidPaymentId(paymentId)) {
+      console.warn('[v0] Invalid paymentId received for completion:', paymentId)
+      return NextResponse.json(
+        { success: false, error: 'Invalid paymentId' },
+        { status: 400 }
+      )
+    }
     
     console.log('[v0] Payment completion requested:', paymentId, 'txid:', txid)
     
